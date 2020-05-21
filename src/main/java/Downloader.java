@@ -19,7 +19,7 @@ public class Downloader {
     static String NEXT_PAGE_LOCATOR = "//ul[@class='switches']/li/button[contains(@class,'next_page')]";
     static String THROUGH_FACEBOOK_LOGIN_BUTTON = "//div[@class='facebook']/a";
 
-    static String ACTIVITIES_LOCATOR = "//tbody/tr[@class='training-activity-row']/td/a[@data-field-name='name']";
+    static String ACTIVITIES_LOCATOR = "//tbody/tr[contains(@class,'training-activity-row')]/td/a[@data-field-name='name']";
     static long VERY_BIG_TIMEOUT = 600000;
 
     static void createNewDir(File currentDir) {
@@ -106,7 +106,7 @@ public class Downloader {
             if (link_downloaded) {
                 continue;
             }
-            Files.write(Paths.get(download_log.getAbsolutePath()), ("Downloading training: " + training + "\n").getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("Downloading training: " + training).getBytes(), StandardOpenOption.APPEND);
             File[] files_before = download_dir.listFiles();
             open(training + "/export_original");
             try {
@@ -129,11 +129,12 @@ public class Downloader {
                 }
             }
             if (downloaded_training_file == null) {
-                Files.write(Paths.get(download_log.getAbsolutePath()), ("No file downloaded").getBytes(), StandardOpenOption.APPEND);
+                Files.write(Paths.get(download_log.getAbsolutePath()), ("...No file downloaded\n").getBytes(), StandardOpenOption.APPEND);
                 continue;
             }
+            String extension = downloaded_training_file.getAbsolutePath().substring(downloaded_training_file.getAbsolutePath().lastIndexOf("."));
 
-            String destination_file_name = training.substring(training.lastIndexOf("/")) + ".fit";
+            String destination_file_name = training.substring(training.lastIndexOf("/")) + extension;
             File destination_file = new File(currentDir, destination_file_name);
             if (destination_file.exists()) {
                 destination_file.delete();
@@ -141,7 +142,7 @@ public class Downloader {
             Files.move(downloaded_training_file.toPath(), destination_file.toPath());
             Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
             Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
-            Files.write(Paths.get(download_log.getAbsolutePath()), ("Done").getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("...Done\n").getBytes(), StandardOpenOption.APPEND);
         }
     }
 
