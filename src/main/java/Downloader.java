@@ -1,79 +1,138 @@
 import com.codeborne.selenide.Configuration;
-import com.codeborne.selenide.WebDriverRunner;
+import com.codeborne.selenide.SelenideElement;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebElement;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.LinkedList;
+import java.util.List;
 
 import static com.codeborne.selenide.Selenide.*;
 
 /**
- * Created by Denis on 7/19/2017.
+ * Created by Denis on 5/21/2020.
  */
 public class Downloader {
-    static String PATH_COUNTRY_NAME = "//div[@id='navigation']//li[contains(@class,'branch sub-collections')]";
-    static String TEMPLATE_COUNTRY_LINK = "//li[@id='%s']/a";
-    static String TEMPLATE_PATH_CITY_LINK = "//li[@id='%s']/ul/li[contains(@class,'branch')]/a";
-    static String PATH_IMAGE_LINK = "//ul[@id='results-list']/li/div[@class='item']/a";
-    static String PATH_LINK_FORWARD = "//div[@class='pagination noscript']/div[@class='controls']/a[@class='next_page']";
-    static Integer numberOfBrowsers = 0;
-    static Integer MAX_NUMBER_OF_BROWSERS = 3;
+    static String STRAVA_TRAININGS_LIST = "https://www.strava.com/athlete/training";
+    static String NEXT_PAGE_LOCATOR = "//ul[@class='switches']/li/button[contains(@class,'next_page')]";
+    static String THROUGH_FACEBOOK_LOGIN_BUTTON = "//div[@class='facebook']/a";
+
+    static String ACTIVITIES_LOCATOR = "//tbody/tr[@class='training-activity-row']/td/a[@data-field-name='name']";
     static long VERY_BIG_TIMEOUT = 600000;
-    public static synchronized Integer getNumberOfBrowsers() {
-        return numberOfBrowsers;
-    }
-
-    public static synchronized void addBrowserNumber() {
-        numberOfBrowsers++;
-    }
-
-    public static synchronized void browserStopped() {
-        numberOfBrowsers--;
-    }
-    public static synchronized void writeFailedDownload(String message, boolean isError) throws IOException {
-        FileWriter fr = new FileWriter(new File(isError?"errors.txt":"success.txt"), true);
-        fr.write(message + "\n");
-        fr.close();
-    }
 
     static void createNewDir(File currentDir) {
-        if(!currentDir.exists()) {
+        if (!currentDir.exists()) {
             currentDir.mkdir();
         } else {
-            if(!currentDir.isDirectory()) {
+            if (!currentDir.isDirectory()) {
                 throw new RuntimeException("File with name exists");
             }
         }
     }
 
-    static void toTopOfMainPage() {
-        System.out.println("To top of page");
-        $(By.id("results-head")).scrollTo();
+    public static void login_strava() {
+        $(By.xpath(THROUGH_FACEBOOK_LOGIN_BUTTON)).click();
     }
 
-    public static void downloadAllPhotos(String directory) throws IOException, InterruptedException {
-        if($$(By.xpath(PATH_IMAGE_LINK)).size() == new File(directory).listFiles().length) {
-            writeFailedDownload("Directory already downloaded: " + directory, false);
-            return;
-        }
-        for(File file: new File(directory).listFiles()) {
-            file.delete();
-        }
-        for(WebElement element:$$(By.xpath(PATH_IMAGE_LINK))) {
-            element.click();
-            System.out.println("Number of threads: " + getNumberOfBrowsers());
-            while(getNumberOfBrowsers() >= MAX_NUMBER_OF_BROWSERS) {
-                System.out.println("Number of threads: " + getNumberOfBrowsers());
-                Thread.sleep(1000);
+    public static LinkedList<String> read_trainings_from_ui(File file) throws IOException {
+        Files.write(Paths.get(file.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+        LinkedList<String> activities = new LinkedList<String>();
+        boolean nextPageExists = true;
+        do {
+            for (SelenideElement activity : $$(By.xpath(ACTIVITIES_LOCATOR))) {
+                activities.add(activity.getAttribute("href"));
+                Files.write(Paths.get(file.getAbsolutePath()), activity.getAttribute("href").getBytes(), StandardOpenOption.APPEND);
+                Files.write(Paths.get(file.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
             }
-            new Thread(new ImageDownloader(directory, WebDriverRunner.url())).start();
-            addBrowserNumber();
-            back();
+            nextPageExists = $(By.xpath(NEXT_PAGE_LOCATOR)).isEnabled();
+            if (nextPageExists) {
+                $(By.xpath(NEXT_PAGE_LOCATOR)).click();
+            }
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        while (nextPageExists);
+        return activities;
+    }
+
+    public static List<String> read_trainings_from_file(File file) throws IOException {
+        List<String> activities = new LinkedList<String>();
+        activities = Files.readAllLines(Paths.get(file.getAbsolutePath()));
+        return activities;
+    }
+
+    public static List<String> read_trainings_list() throws IOException {
+        List<String> activities = new LinkedList<String>();
+        File activities_links = new File("links.txt");
+        if (activities_links.exists()) {
+            activities = read_trainings_from_file(activities_links);
+        } else {
+            activities = read_trainings_from_ui(activities_links);
+        }
+        return activities;
+    }
+
+    public static void download_trainings(File currentDir, List<String> trainings) throws IOException {
+        File activities_links = new File("downloaded_links.txt");
+        List<String> downloaded_activities = new LinkedList<String>();
+        if(!activities_links.exists()) {
+            Files.write(Paths.get(activities_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+        } else {
+            downloaded_activities = Files.readAllLines(Paths.get(activities_links.getAbsolutePath()));
+        }
+        String home = System.getProperty("user.home");
+        File download_dir = new File(home + "/Downloads/");
+        for (String training : trainings) {
+            boolean link_downloaded = false;
+            for (String downloaded_link: downloaded_activities) {
+                if (training.equalsIgnoreCase(downloaded_link)) {
+                    link_downloaded = true;
+                    break;
+                }
+            }
+            if (link_downloaded) {
+                continue;
+            }
+            File[] files_before = download_dir.listFiles();
+            open(training + "/export_original");
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            File downloaded_training_file = null;
+            for (File file_after : download_dir.listFiles()) {
+                boolean file_found = false;
+                for (File file_before : files_before) {
+                    if (file_after.getAbsolutePath().equalsIgnoreCase(file_before.getAbsolutePath())) {
+                        file_found = true;
+                        break;
+                    }
+                }
+                if (!file_found) {
+                    downloaded_training_file = file_after;
+                    break;
+                }
+            }
+            if (downloaded_training_file == null) {
+                throw new RuntimeException("No file downloaded");
+            }
+
+            String destination_file_name = training.substring(training.lastIndexOf("/")) + ".fit";
+            File destination_file = new File(currentDir, destination_file_name);
+            Files.copy(downloaded_training_file.toPath(), destination_file.toPath());
+            Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
         }
     }
 
-    public static void main(String [] args) throws IOException, InterruptedException {
-        File currentDir = new File("SavedFiles");
+    public static void main(String[] args) throws IOException, InterruptedException {
+        File currentDir = new File("SavedTrainings");
         createNewDir(currentDir);
         Configuration.browser = "chrome";
         System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
@@ -82,40 +141,10 @@ public class Downloader {
         Configuration.collectionsTimeout = VERY_BIG_TIMEOUT;
         Configuration.openBrowserTimeoutMs = VERY_BIG_TIMEOUT;
 
-        open("https://digitalcollections.nypl.org/collections/the-vinkhuijzen-collection-of-military-uniforms#/?tab=navigation&roots=3:708df000-c532-012f-0fc1-58d385a7bc34");
-        for(WebElement country: $$(By.xpath(PATH_COUNTRY_NAME))) {
-            WebElement countryLink = $(By.xpath(String.format(TEMPLATE_COUNTRY_LINK, country.getAttribute("id"))));
-            toTopOfMainPage();
-            countryLink.click();
-            System.out.println("Click county:" + countryLink.getText());
-            Thread.sleep(2000);
-            File countryDir = new File(currentDir.getAbsolutePath(),countryLink.getText().replace(" ", ""));
-            createNewDir(countryDir);
-            for(WebElement city:$$(By.xpath(String.format(TEMPLATE_PATH_CITY_LINK, country.getAttribute("id"))))) {
-                System.out.println("\tClick city:" + city.getText());
-                toTopOfMainPage();
-                city.click();
-                Thread.sleep(2000);
-                File cityDir = new File(countryDir.getAbsolutePath(),city.getText().replace(" ", ""));
-                createNewDir(cityDir);
-                downloadAllPhotos(cityDir.getAbsolutePath());
-/*                while($(By.xpath(PATH_LINK_FORWARD)).isDisplayed() && $(By.xpath(PATH_LINK_FORWARD)).isEnabled()) {
-                    $(By.xpath(PATH_LINK_FORWARD)).click();
-                    downloadAllPhotos(cityDir.getAbsolutePath());
-                }*/
-            }
-
-
-        }
+        open(STRAVA_TRAININGS_LIST);
+        login_strava();
+        List<String> trainings = read_trainings_list();
+        download_trainings(currentDir, trainings);
     }
 }
-
-
-
-
-
-
-
-
-
 
