@@ -86,19 +86,19 @@ public class Downloader {
         File activities_links = new File("downloaded_links.txt");
         File download_log = new File("log.txt");
         List<String> downloaded_activities = new LinkedList<String>();
-        if(!activities_links.exists()) {
+        if (!download_log.exists()) {
             Files.write(Paths.get(download_log.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
         }
-            if(!activities_links.exists()) {
-                Files.write(Paths.get(activities_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
-            } else {
+        if (!activities_links.exists()) {
+            Files.write(Paths.get(activities_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+        } else {
             downloaded_activities = Files.readAllLines(Paths.get(activities_links.getAbsolutePath()));
         }
         String home = System.getProperty("user.home");
         File download_dir = new File(home + "/Downloads/");
         for (String training : trainings) {
             boolean link_downloaded = false;
-            for (String downloaded_link: downloaded_activities) {
+            for (String downloaded_link : downloaded_activities) {
                 if (training.equalsIgnoreCase(downloaded_link)) {
                     link_downloaded = true;
                     break;
@@ -107,7 +107,7 @@ public class Downloader {
             if (link_downloaded) {
                 continue;
             }
-            Files.write(Paths.get(activities_links.getAbsolutePath()), ("Downloading training: " + training + "\n").getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("Downloading training: " + training + "\n").getBytes(), StandardOpenOption.APPEND);
             File[] files_before = download_dir.listFiles();
             open(training + "/export_original");
             try {
@@ -130,7 +130,7 @@ public class Downloader {
                 }
             }
             if (downloaded_training_file == null) {
-                Files.write(Paths.get(activities_links.getAbsolutePath()), ("No file downloaded").getBytes(), StandardOpenOption.APPEND);
+                Files.write(Paths.get(download_log.getAbsolutePath()), ("No file downloaded").getBytes(), StandardOpenOption.APPEND);
                 continue;
             }
 
