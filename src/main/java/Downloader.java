@@ -84,10 +84,14 @@ public class Downloader {
 
     public static void download_trainings(File currentDir, List<String> trainings) throws IOException {
         File activities_links = new File("downloaded_links.txt");
+        File download_log = new File("log.txt");
         List<String> downloaded_activities = new LinkedList<String>();
         if(!activities_links.exists()) {
-            Files.write(Paths.get(activities_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
-        } else {
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+        }
+            if(!activities_links.exists()) {
+                Files.write(Paths.get(activities_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+            } else {
             downloaded_activities = Files.readAllLines(Paths.get(activities_links.getAbsolutePath()));
         }
         String home = System.getProperty("user.home");
@@ -103,6 +107,7 @@ public class Downloader {
             if (link_downloaded) {
                 continue;
             }
+            Files.write(Paths.get(activities_links.getAbsolutePath()), ("Downloading training: " + training + "\n").getBytes(), StandardOpenOption.APPEND);
             File[] files_before = download_dir.listFiles();
             open(training + "/export_original");
             try {
@@ -125,7 +130,8 @@ public class Downloader {
                 }
             }
             if (downloaded_training_file == null) {
-                throw new RuntimeException("No file downloaded");
+                Files.write(Paths.get(activities_links.getAbsolutePath()), ("No file downloaded").getBytes(), StandardOpenOption.APPEND);
+                continue;
             }
 
             String destination_file_name = training.substring(training.lastIndexOf("/")) + ".fit";
