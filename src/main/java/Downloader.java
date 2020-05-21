@@ -142,6 +142,7 @@ public class Downloader {
             Files.move(downloaded_training_file.toPath(), destination_file.toPath());
             Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
             Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("Done").getBytes(), StandardOpenOption.APPEND);
         }
     }
 
