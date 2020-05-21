@@ -48,7 +48,7 @@ public class Downloader {
         int pages_counter = 0;
         do {
             pages_counter++;
-            Files.write(Paths.get(download_log.getAbsolutePath()), ($$(By.xpath(ACTIVITIES_LOCATOR)).size() + " - number of trainings on page " + pages_counter).getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ($$(By.xpath(ACTIVITIES_LOCATOR)).size() + " - number of trainings on page " + pages_counter + "\n").getBytes(), StandardOpenOption.APPEND);
             for (SelenideElement activity : $$(By.xpath(ACTIVITIES_LOCATOR))) {
                 activities.add(activity.getAttribute("href"));
                 Files.write(Paths.get(file.getAbsolutePath()), activity.getAttribute("href").getBytes(), StandardOpenOption.APPEND);
