@@ -33,7 +33,12 @@ public class Downloader {
     }
 
     public static void login_strava() {
-        $(By.xpath(THROUGH_FACEBOOK_LOGIN_BUTTON)).click();
+        try {
+            Thread.sleep(60000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+//        $(By.xpath(THROUGH_FACEBOOK_LOGIN_BUTTON)).click();
     }
 
     public static LinkedList<String> read_trainings_from_ui(File file) throws IOException {
@@ -125,7 +130,10 @@ public class Downloader {
 
             String destination_file_name = training.substring(training.lastIndexOf("/")) + ".fit";
             File destination_file = new File(currentDir, destination_file_name);
-            Files.copy(downloaded_training_file.toPath(), destination_file.toPath());
+            if (destination_file.exists()) {
+                destination_file.delete();
+            }
+            Files.move(downloaded_training_file.toPath(), destination_file.toPath());
             Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
             Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
         }
