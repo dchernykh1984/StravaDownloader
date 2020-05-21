@@ -41,11 +41,14 @@ public class Downloader {
 //        $(By.xpath(THROUGH_FACEBOOK_LOGIN_BUTTON)).click();
     }
 
-    public static LinkedList<String> read_trainings_from_ui(File file) throws IOException {
+    public static LinkedList<String> read_trainings_from_ui(File file, File download_log) throws IOException {
         Files.write(Paths.get(file.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
         LinkedList<String> activities = new LinkedList<String>();
         boolean nextPageExists = true;
+        int pages_counter = 0;
         do {
+            pages_counter++;
+            Files.write(Paths.get(download_log.getAbsolutePath()), ($$(By.xpath(ACTIVITIES_LOCATOR)).size() + " - number of trainings on page " + pages_counter).getBytes(), StandardOpenOption.APPEND);
             for (SelenideElement activity : $$(By.xpath(ACTIVITIES_LOCATOR))) {
                 activities.add(activity.getAttribute("href"));
                 Files.write(Paths.get(file.getAbsolutePath()), activity.getAttribute("href").getBytes(), StandardOpenOption.APPEND);
@@ -56,7 +59,7 @@ public class Downloader {
                 $(By.xpath(NEXT_PAGE_LOCATOR)).click();
             }
             try {
-                Thread.sleep(3000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -71,24 +74,20 @@ public class Downloader {
         return activities;
     }
 
-    public static List<String> read_trainings_list() throws IOException {
+    public static List<String> read_trainings_list(File download_log) throws IOException {
         List<String> activities = new LinkedList<String>();
         File activities_links = new File("links.txt");
         if (activities_links.exists()) {
             activities = read_trainings_from_file(activities_links);
         } else {
-            activities = read_trainings_from_ui(activities_links);
+            activities = read_trainings_from_ui(activities_links, download_log);
         }
         return activities;
     }
 
-    public static void download_trainings(File currentDir, List<String> trainings) throws IOException {
+    public static void download_trainings(File currentDir, List<String> trainings, File download_log) throws IOException {
         File activities_links = new File("downloaded_links.txt");
-        File download_log = new File("log.txt");
         List<String> downloaded_activities = new LinkedList<String>();
-        if (!download_log.exists()) {
-            Files.write(Paths.get(download_log.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
-        }
         if (!activities_links.exists()) {
             Files.write(Paths.get(activities_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
         } else {
@@ -148,6 +147,10 @@ public class Downloader {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         File currentDir = new File("SavedTrainings");
+        File download_log = new File("log.txt");
+        if (!download_log.exists()) {
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+        }
         createNewDir(currentDir);
         Configuration.browser = "chrome";
         System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
@@ -158,8 +161,8 @@ public class Downloader {
 
         open(STRAVA_TRAININGS_LIST);
         login_strava();
-        List<String> trainings = read_trainings_list();
-        download_trainings(currentDir, trainings);
+        List<String> trainings = read_trainings_list(download_log);
+        download_trainings(currentDir, trainings, download_log);
     }
 }
 
