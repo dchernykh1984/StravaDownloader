@@ -3,6 +3,7 @@ UI robot, that downloads all activities from STRAVA to local directory
 To build run "mvn package" from project directory (required maven, jdk, ...) 
 
 # Build project
+ПРОВЕРЕНО ТОЛЬКО НА WINDOWS, требуется установленный браузер Chrome
 Сборка лежит здесь:  
 https://yadi.sk/d/lnGpXPCxL0EMrQ  
 Качаем всю папку. если нет, то устанавливаем jre (Java Runtime Environment). дальше говорим в командной строке из папки, куда скачали: java -jar StravaDownloader-1.0-jar-with-dependencies.jar  
