@@ -1,3 +1,4 @@
+package com.dchernykh;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.SelenideElement;
 import org.openqa.selenium.By;
