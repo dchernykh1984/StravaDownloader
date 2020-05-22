@@ -2,7 +2,7 @@
 UI robot, that downloads all activities from STRAVA to local directory
 To build run "mvn package" from project directory (required maven, jdk, ...) 
 
-# Build project
+# Built project (для тех, кто не хочет устанавливать среду разработки, а хочет просто скачать и запустить)
 ПРОВЕРЕНО ТОЛЬКО НА WINDOWS, требуется установленный браузер Chrome
 Сборка лежит здесь:  
 https://yadi.sk/d/lnGpXPCxL0EMrQ  
