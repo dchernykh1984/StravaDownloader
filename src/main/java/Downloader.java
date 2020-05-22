@@ -17,7 +17,7 @@ import static com.codeborne.selenide.Selenide.*;
 public class Downloader {
     static String STRAVA_TRAININGS_LIST = "https://www.strava.com/athlete/training";
     static String NEXT_PAGE_LOCATOR = "//ul[@class='switches']/li/button[contains(@class,'next_page')]";
-    static String THROUGH_FACEBOOK_LOGIN_BUTTON = "//div[@class='facebook']/a";
+    static String ACTIVITY_DESCRIPTION_LOCATOR = "//div[contains(@class,'activity-summary-container')]";
 
     static String ACTIVITIES_LOCATOR = "//tbody/tr[contains(@class,'training-activity-row')]/td/a[@data-field-name='name']";
     static long VERY_BIG_TIMEOUT = 600000;
@@ -38,7 +38,6 @@ public class Downloader {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        $(By.xpath(THROUGH_FACEBOOK_LOGIN_BUTTON)).click();
     }
 
     public static LinkedList<String> read_trainings_from_ui(File file, File download_log) throws IOException {
@@ -86,6 +85,10 @@ public class Downloader {
     }
 
     public static void download_trainings(File currentDir, List<String> trainings, File download_log) throws IOException {
+        File description_loaded_links = new File("downloaded_descriptions_links.txt");
+        if (!description_loaded_links.exists()) {
+            Files.write(Paths.get(description_loaded_links.getAbsolutePath()), ("").getBytes(), StandardOpenOption.CREATE);
+        }
         File activities_links = new File("downloaded_links.txt");
         List<String> downloaded_activities = new LinkedList<String>();
         if (!activities_links.exists()) {
@@ -129,7 +132,19 @@ public class Downloader {
                 }
             }
             if (downloaded_training_file == null) {
-                Files.write(Paths.get(download_log.getAbsolutePath()), ("...No file downloaded\n").getBytes(), StandardOpenOption.APPEND);
+                Files.write(Paths.get(download_log.getAbsolutePath()), ("...no file downloaded. Loading descriptions...").getBytes(), StandardOpenOption.APPEND);
+                String description = $(By.xpath(ACTIVITY_DESCRIPTION_LOCATOR)).getText();
+
+                String destination_file_name = training.substring(training.lastIndexOf("/")) + ".txt";
+                File destination_file = new File(currentDir, destination_file_name);
+                if (destination_file.exists()) {
+                    destination_file.delete();
+                }
+                Files.write(Paths.get(destination_file.getAbsolutePath()), description.getBytes(), StandardOpenOption.CREATE);
+                Files.write(Paths.get(description_loaded_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
+                Files.write(Paths.get(description_loaded_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
+
+                Files.write(Paths.get(download_log.getAbsolutePath()), ("DONE\n").getBytes(), StandardOpenOption.APPEND);
                 continue;
             }
             String extension = downloaded_training_file.getAbsolutePath().substring(downloaded_training_file.getAbsolutePath().lastIndexOf("."));
@@ -142,7 +157,7 @@ public class Downloader {
             Files.move(downloaded_training_file.toPath(), destination_file.toPath());
             Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
             Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
-            Files.write(Paths.get(download_log.getAbsolutePath()), ("...Done\n").getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("...DONE\n").getBytes(), StandardOpenOption.APPEND);
         }
     }
 
