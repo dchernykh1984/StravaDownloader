@@ -1,4 +1,5 @@
 package com.dchernykh;
+
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.SelenideElement;
 import org.openqa.selenium.By;
@@ -85,6 +86,56 @@ public class Downloader {
         return activities;
     }
 
+    public static boolean download_file(String training, File download_log, File download_dir, File currentDir, File description_loaded_links, String link_addition) throws IOException {
+        Files.write(Paths.get(download_log.getAbsolutePath()), ("Downloading training: " + training + link_addition).getBytes(), StandardOpenOption.APPEND);
+        File[] files_before = download_dir.listFiles();
+        open(training + link_addition);
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        File downloaded_training_file = null;
+        for (File file_after : download_dir.listFiles()) {
+            boolean file_found = false;
+            for (File file_before : files_before) {
+                if (file_after.getAbsolutePath().equalsIgnoreCase(file_before.getAbsolutePath())) {
+                    file_found = true;
+                    break;
+                }
+            }
+            if (!file_found) {
+                downloaded_training_file = file_after;
+                break;
+            }
+        }
+        if (downloaded_training_file == null) {
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("...no file downloaded. Loading descriptions...").getBytes(), StandardOpenOption.APPEND);
+            String description = $(By.xpath(ACTIVITY_DESCRIPTION_LOCATOR)).getText();
+
+            String destination_file_name = training.substring(training.lastIndexOf("/")) + ".txt";
+            File destination_file = new File(currentDir, destination_file_name);
+            if (destination_file.exists()) {
+                destination_file.delete();
+            }
+            Files.write(Paths.get(destination_file.getAbsolutePath()), description.getBytes(), StandardOpenOption.CREATE);
+            Files.write(Paths.get(description_loaded_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(description_loaded_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
+
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("DONE\n").getBytes(), StandardOpenOption.APPEND);
+            return false;
+        }
+        String extension = downloaded_training_file.getAbsolutePath().substring(downloaded_training_file.getAbsolutePath().lastIndexOf("."));
+
+        String destination_file_name = training.substring(training.lastIndexOf("/")) + extension;
+        File destination_file = new File(currentDir, destination_file_name);
+        if (destination_file.exists()) {
+            destination_file.delete();
+        }
+        Files.move(downloaded_training_file.toPath(), destination_file.toPath());
+        return true;
+    }
+
     public static void download_trainings(File currentDir, List<String> trainings, File download_log) throws IOException {
         File description_loaded_links = new File("downloaded_descriptions_links.txt");
         if (!description_loaded_links.exists()) {
@@ -110,55 +161,15 @@ public class Downloader {
             if (link_downloaded) {
                 continue;
             }
-            Files.write(Paths.get(download_log.getAbsolutePath()), ("Downloading training: " + training).getBytes(), StandardOpenOption.APPEND);
-            File[] files_before = download_dir.listFiles();
-            open(training + "/export_original");
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            link_downloaded = download_file(training, download_log, download_dir, currentDir, description_loaded_links, "/export_original");
+            if (link_downloaded) {
+                download_file(training, download_log, download_dir, currentDir, description_loaded_links, "/export_gpx");
             }
-            File downloaded_training_file = null;
-            for (File file_after : download_dir.listFiles()) {
-                boolean file_found = false;
-                for (File file_before : files_before) {
-                    if (file_after.getAbsolutePath().equalsIgnoreCase(file_before.getAbsolutePath())) {
-                        file_found = true;
-                        break;
-                    }
-                }
-                if (!file_found) {
-                    downloaded_training_file = file_after;
-                    break;
-                }
+            if(link_downloaded) {
+                Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
+                Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
             }
-            if (downloaded_training_file == null) {
-                Files.write(Paths.get(download_log.getAbsolutePath()), ("...no file downloaded. Loading descriptions...").getBytes(), StandardOpenOption.APPEND);
-                String description = $(By.xpath(ACTIVITY_DESCRIPTION_LOCATOR)).getText();
-
-                String destination_file_name = training.substring(training.lastIndexOf("/")) + ".txt";
-                File destination_file = new File(currentDir, destination_file_name);
-                if (destination_file.exists()) {
-                    destination_file.delete();
-                }
-                Files.write(Paths.get(destination_file.getAbsolutePath()), description.getBytes(), StandardOpenOption.CREATE);
-                Files.write(Paths.get(description_loaded_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
-                Files.write(Paths.get(description_loaded_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
-
-                Files.write(Paths.get(download_log.getAbsolutePath()), ("DONE\n").getBytes(), StandardOpenOption.APPEND);
-                continue;
-            }
-            String extension = downloaded_training_file.getAbsolutePath().substring(downloaded_training_file.getAbsolutePath().lastIndexOf("."));
-
-            String destination_file_name = training.substring(training.lastIndexOf("/")) + extension;
-            File destination_file = new File(currentDir, destination_file_name);
-            if (destination_file.exists()) {
-                destination_file.delete();
-            }
-            Files.move(downloaded_training_file.toPath(), destination_file.toPath());
-            Files.write(Paths.get(activities_links.getAbsolutePath()), training.getBytes(), StandardOpenOption.APPEND);
-            Files.write(Paths.get(activities_links.getAbsolutePath()), "\n".getBytes(), StandardOpenOption.APPEND);
-            Files.write(Paths.get(download_log.getAbsolutePath()), ("...DONE\n").getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(download_log.getAbsolutePath()), ("...BOTH LINKS DOWNLOADED\n").getBytes(), StandardOpenOption.APPEND);
         }
     }
 
